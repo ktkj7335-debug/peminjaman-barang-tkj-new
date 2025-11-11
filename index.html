@@ -1,0 +1,514 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Peminjaman Barang TKJ — Single File App</title>
+
+<!-- Font -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+<style>
+:root{
+  --bg: #f6f8fb;
+  --card: #ffffff;
+  --muted: #6b7280;
+  --accent: #1e40af;
+  --accent-2:#1e3a8a;
+  --danger:#ef4444;
+  --radius:12px;
+  --shadow: 0 10px 30px rgba(16,24,40,0.06);
+  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+  color-scheme: light;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;
+  background:linear-gradient(180deg,#f7f9fc 0%, var(--bg) 100%);
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+  color:#0f172a;
+  padding:24px 16px;
+}
+
+/* container */
+.container{max-width:1100px;margin:0 auto}
+
+/* header */
+.header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  margin-bottom:18px;
+}
+.brand{
+  display:flex;gap:12px;align-items:center;
+}
+.logo{
+  width:44px;height:44px;border-radius:10px;background:linear-gradient(135deg,var(--accent),var(--accent-2));
+  display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:18px;box-shadow:var(--shadow);
+}
+.brand h1{font-size:18px;margin:0}
+.controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+
+/* buttons */
+.btn{
+  background:var(--accent);
+  color:white;padding:10px 14px;border-radius:10px;border:none;cursor:pointer;font-weight:600;
+  box-shadow: 0 6px 18px rgba(30,64,175,0.12);
+}
+.btn.ghost{background:transparent;color:var(--accent);border:1px solid rgba(30,64,175,0.08);box-shadow:none}
+.btn.warn{background:var(--danger);box-shadow:none}
+.icon-btn{display:inline-flex;align-items:center;gap:8px}
+
+/* layout */
+.grid{
+  display:grid;
+  grid-template-columns: 1fr 380px;
+  gap:18px;
+}
+@media (max-width:980px){ .grid{grid-template-columns:1fr} }
+
+/* card */
+.card{
+  background:var(--card);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow);
+}
+
+/* form */
+.form-row{display:flex;gap:8px;align-items:center;margin-bottom:10px}
+.form-row .flex{flex:1}
+.input,textarea,select{
+  width:100%;padding:10px;border-radius:8px;border:1px solid #e6e9ef;font-size:14px;
+}
+textarea{min-height:80px;resize:vertical}
+
+/* item list */
+.items{display:grid;gap:12px}
+.item{
+  display:flex;align-items:flex-start;gap:12px;padding:12px;border-radius:10px;border:1px solid #f0f3f8;
+  transition:transform .12s ease, box-shadow .12s ease;background:linear-gradient(180deg,#fff,#fbfdff);
+}
+.item:hover{transform:translateY(-4px);box-shadow:0 10px 30px rgba(16,24,40,0.06)}
+.item .meta{flex:1}
+.item h3{margin:0 0 6px 0;font-size:16px}
+.muted{color:var(--muted);font-size:13px}
+.badge{
+  display:inline-block;padding:6px 8px;border-radius:999px;font-weight:700;font-size:13px;
+  background:#f1f5f9;color:#0f172a;border:1px solid #eef2ff;
+}
+.actions{display:flex;gap:8px;align-items:center;margin-top:8px}
+
+/* small form */
+.small{font-size:13px;padding:8px 10px;border-radius:8px}
+
+/* history table */
+.table{width:100%;border-collapse:collapse;font-size:14px}
+.table th, .table td{padding:8px;text-align:left;border-bottom:1px solid #f1f5f9}
+.table th{font-weight:700;color:var(--muted);font-size:13px}
+
+/* footer */
+.footer{margin-top:18px;text-align:center;color:var(--muted);font-size:13px}
+
+/* minimal tooltip-like text */
+.hint{font-size:12px;color:var(--muted)}
+
+/* empty */
+.empty{padding:24px;text-align:center;color:var(--muted);background:#fff;border-radius:10px}
+</style>
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <div class="brand">
+        <div class="logo">TKJ</div>
+        <div>
+          <h1>Peminjaman Barang — TKJ</h1>
+          <div class="hint">Aplikasi single-file (LocalStorage). Cocok di-upload ke GitHub.</div>
+        </div>
+      </div>
+
+      <div class="controls">
+        <button class="btn" id="btnExport">Export JSON</button>
+        <label class="btn ghost" style="display:inline-flex;align-items:center;gap:8px;cursor:pointer">
+          Import
+          <input id="fileImport" type="file" accept="application/json" style="display:none">
+        </label>
+        <button class="btn ghost" id="btnReset">Reset Data</button>
+      </div>
+    </header>
+
+    <main class="grid">
+      <!-- left: item list + history -->
+      <section>
+        <div class="card" style="margin-bottom:12px">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <h2 style="margin:0;font-size:16px">Daftar Barang</h2>
+            <div class="hint" id="stats">—</div>
+          </div>
+        </div>
+
+        <div id="itemsContainer" class="items"></div>
+
+        <div style="margin-top:12px" class="card">
+          <h3 style="margin-top:0">Riwayat Peminjaman</h3>
+          <div id="historyWrap"></div>
+        </div>
+      </section>
+
+      <!-- right: add item form -->
+      <aside>
+        <div class="card">
+          <h3 style="margin-top:0">Tambah / Edit Barang</h3>
+
+          <div style="margin-top:8px" id="formMsg" class="hint"></div>
+
+          <div style="margin-top:8px">
+            <div class="form-row">
+              <input id="itemName" class="input flex" placeholder="Nama barang (mis. Obeng)" />
+            </div>
+            <div class="form-row">
+              <input id="itemQty" class="input" type="number" min="0" value="1" />
+            </div>
+            <div class="form-row">
+              <textarea id="itemDesc" placeholder="Deskripsi / lokasi (opsional)"></textarea>
+            </div>
+
+            <div style="display:flex;gap:8px">
+              <button id="btnSave" class="btn">Simpan</button>
+              <button id="btnCancelEdit" class="btn ghost" style="display:none">Batal Edit</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top:12px">
+          <h3 style="margin-top:0">Petunjuk Singkat</h3>
+          <ol class="hint" style="padding-left:18px">
+            <li>Tambah barang lalu gunakan tombol <strong>Pinjam</strong> pada kartu barang.</li>
+            <li>Masukkan nama peminjam saat meminjam.</li>
+            <li>Riwayat menunjukkan siapa meminjam dan status kembali.</li>
+            <li>Gunakan Export/Import untuk backup data.</li>
+          </ol>
+        </div>
+      </aside>
+    </main>
+
+    <div class="footer">© <span id="year"></span> — Aplikasi sederhana untuk kebutuhan lab TKJ</div>
+  </div>
+
+<script>
+/*
+ Single-file Peminjaman Barang TKJ
+ Penyimpanan: localStorage key 'tkj_data_v1'
+ Struktur data:
+ {
+   items: [{id, name, desc, qty, createdAt}],
+   borrows: [{id, itemId, borrower, borrowDate, returnDate|null, status}]
+ }
+*/
+
+// util helpers
+const $ = (s,el=document)=>el.querySelector(s);
+const $$ = (s,el=document)=>Array.from(el.querySelectorAll(s));
+const uid = ()=>Date.now().toString(36) + Math.random().toString(36).slice(2,8);
+
+const STORAGE_KEY = 'tkj_data_v1';
+
+// default sample data if empty
+const defaultData = {
+  items: [
+    {id: uid(), name: 'Obeng silang', desc: 'Laci 1', qty: 5, createdAt: new Date().toISOString()},
+    {id: uid(), name: 'Multimeter', desc: 'Rak alat', qty: 2, createdAt: new Date().toISOString()},
+  ],
+  borrows: []
+};
+
+// load / save
+function loadData(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(!raw) return JSON.parse(JSON.stringify(defaultData));
+    return JSON.parse(raw);
+  }catch(e){
+    console.error('Load error',e);
+    return JSON.parse(JSON.stringify(defaultData));
+  }
+}
+function saveData(data){
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+}
+
+/* UI references */
+const itemsContainer = $('#itemsContainer');
+const historyWrap = $('#historyWrap');
+const stats = $('#stats');
+const yearEl = $('#year');
+yearEl.textContent = new Date().getFullYear();
+
+/* form refs */
+const itemName = $('#itemName');
+const itemQty = $('#itemQty');
+const itemDesc = $('#itemDesc');
+const btnSave = $('#btnSave');
+const btnCancelEdit = $('#btnCancelEdit');
+
+const btnExport = $('#btnExport');
+const fileImport = $('#fileImport');
+const btnReset = $('#btnReset');
+
+let state = loadData();
+let editingId = null;
+
+/* render functions */
+function render(){
+  // update stats
+  const totalItems = state.items.length;
+  const borrowedCount = state.borrows.filter(b=>b.status==='dipinjam').length;
+  stats.textContent = `${totalItems} barang • ${borrowedCount} peminjaman aktif`;
+
+  renderItems();
+  renderHistory();
+  saveData(state);
+}
+
+function renderItems(){
+  itemsContainer.innerHTML = '';
+  if(state.items.length === 0){
+    itemsContainer.innerHTML = '<div class="empty card">Belum ada barang. Tambah barang menggunakan form di kanan.</div>';
+    return;
+  }
+  // sort by createdAt desc
+  const items = state.items.slice().sort((a,b)=> new Date(b.createdAt) - new Date(a.createdAt));
+  items.forEach(it=>{
+    const div = document.createElement('div');
+    div.className = 'item card';
+    div.innerHTML = `
+      <div style="min-width:72px;display:flex;align-items:center;justify-content:center">
+        <div style="width:56px;height:56px;border-radius:10px;background:linear-gradient(135deg,var(--accent),var(--accent-2));display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700">
+          ${escapeHTML(it.name).split(' ').map(w=>w[0]||'').slice(0,2).join('').toUpperCase()}
+        </div>
+      </div>
+      <div class="meta">
+        <h3>${escapeHTML(it.name)}</h3>
+        <div class="muted">${escapeHTML(it.desc || '—')}</div>
+        <div class="actions">
+          <div class="badge">Stok: ${it.qty}</div>
+          <div style="flex:1"></div>
+          <button class="btn small" data-act="borrow" data-id="${it.id}">Pinjam</button>
+          <button class="btn ghost small" data-act="edit" data-id="${it.id}">Edit</button>
+          <button class="btn ghost small" data-act="del" data-id="${it.id}">Hapus</button>
+        </div>
+      </div>
+    `;
+    itemsContainer.appendChild(div);
+  });
+}
+
+/* render history */
+function renderHistory(){
+  const rows = state.borrows.slice().sort((a,b)=> new Date(b.borrowDate) - new Date(a.borrowDate));
+  if(rows.length === 0){
+    historyWrap.innerHTML = '<div class="empty">Belum ada riwayat peminjaman.</div>';
+    return;
+  }
+  const table = document.createElement('table');
+  table.className = 'table';
+  table.innerHTML = `<thead><tr><th>Barang</th><th>Peminjam</th><th>Tanggal</th><th>Status</th><th></th></tr></thead>`;
+  const tbody = document.createElement('tbody');
+  rows.forEach(r=>{
+    const item = state.items.find(i=>i.id===r.itemId);
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${escapeHTML(item ? item.name : '[barang dihapus]')}</td>
+      <td>${escapeHTML(r.borrower)}</td>
+      <td>${formatDate(r.borrowDate)}${r.returnDate ? ' → ' + formatDate(r.returnDate) : ''}</td>
+      <td>${r.status === 'dipinjam' ? '<strong style="color:var(--accent)">Dipinjam</strong>' : '<span style="color:var(--muted)">Kembali</span>'}</td>
+      <td style="text-align:right">
+        ${r.status === 'dipinjam' ? `<button class="btn small" data-act="return" data-id="${r.id}">Kembalikan</button>` : `<button class="btn ghost small" data-act="remove" data-id="${r.id}">Hapus</button>`}
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+  table.appendChild(tbody);
+  historyWrap.innerHTML = '';
+  historyWrap.appendChild(table);
+}
+
+/* helpers */
+function escapeHTML(s=''){ return String(s).replace(/[&<>"']/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;" }[c])); }
+function formatDate(d){ if(!d) return '-'; const dt = new Date(d); return dt.toLocaleDateString('id-ID'); }
+
+/* actions: add / edit / delete */
+btnSave.addEventListener('click', ()=>{
+  const name = (itemName.value||'').trim();
+  const qty = Math.max(0, parseInt(itemQty.value||0));
+  const desc = (itemDesc.value||'').trim();
+
+  if(!name){ showFormMsg('Nama barang harus diisi', true); return; }
+
+  if(editingId){
+    // update
+    const it = state.items.find(x=>x.id===editingId);
+    if(!it){ showFormMsg('Data tidak ditemukan', true); resetForm(); return; }
+    it.name = name; it.desc = desc; it.qty = qty;
+    showFormMsg('Perubahan disimpan');
+    editingId = null;
+    btnCancelEdit.style.display = 'none';
+  }else{
+    // create
+    const newItem = {id: uid(), name, desc, qty, createdAt: new Date().toISOString()};
+    state.items.push(newItem);
+    showFormMsg('Barang ditambahkan');
+  }
+  resetForm();
+  render();
+});
+
+btnCancelEdit.addEventListener('click', ()=>{
+  resetForm();
+  editingId = null;
+  btnCancelEdit.style.display = 'none';
+});
+
+/* delegate clicks on items container */
+itemsContainer.addEventListener('click', (e)=>{
+  const btn = e.target.closest('button');
+  if(!btn) return;
+  const act = btn.dataset.act;
+  const id = btn.dataset.id;
+  if(act === 'borrow'){
+    handleBorrow(id);
+  }else if(act === 'edit'){
+    startEdit(id);
+  }else if(act === 'del'){
+    if(confirm('Hapus barang ini? Semua riwayat terkait akan tetap ada (nama barang akan tampil [barang dihapus]).')) {
+      // remove item
+      state.items = state.items.filter(i=>i.id!==id);
+      render();
+    }
+  }
+});
+
+/* delegate clicks on history */
+historyWrap.addEventListener('click',(e)=>{
+  const btn = e.target.closest('button');
+  if(!btn) return;
+  const act = btn.dataset.act;
+  const id = btn.dataset.id;
+  if(act === 'return'){
+    handleReturn(id);
+  }else if(act === 'remove'){
+    if(confirm('Hapus entry riwayat ini?')) {
+      state.borrows = state.borrows.filter(b=>b.id!==id);
+      render();
+    }
+  }
+});
+
+/* borrow logic */
+function handleBorrow(itemId){
+  const it = state.items.find(i=>i.id===itemId);
+  if(!it){ alert('Barang tidak ditemukan'); return; }
+  if(it.qty <= 0){ alert('Stok kosong'); return; }
+  const name = prompt(`Pinjam: ${it.name}\nMasukkan nama peminjam:`,'');
+  if(!name) return;
+  // update stok and add borrow record as transaction (simple)
+  it.qty = it.qty - 1;
+  const rec = {id: uid(), itemId: it.id, borrower: name.trim(), borrowDate: new Date().toISOString(), returnDate: null, status: 'dipinjam'};
+  state.borrows.push(rec);
+  render();
+}
+
+/* return logic */
+function handleReturn(borrowId){
+  const rec = state.borrows.find(b=>b.id===borrowId);
+  if(!rec){ alert('Record tidak ditemukan'); return; }
+  if(rec.status !== 'dipinjam'){ alert('Sudah dikembalikan'); return; }
+  rec.status = 'kembali';
+  rec.returnDate = new Date().toISOString();
+  // tambah stok (jika barang masih ada)
+  const it = state.items.find(i=>i.id===rec.itemId);
+  if(it) it.qty = it.qty + 1;
+  render();
+}
+
+/* edit */
+function startEdit(id){
+  const it = state.items.find(x=>x.id===id);
+  if(!it) return;
+  editingId = it.id;
+  itemName.value = it.name;
+  itemQty.value = it.qty;
+  itemDesc.value = it.desc;
+  btnCancelEdit.style.display = 'inline-block';
+  showFormMsg('Mode edit — ubah lalu klik Simpan');
+}
+
+/* small helpers */
+function resetForm(){
+  itemName.value = '';
+  itemQty.value = 1;
+  itemDesc.value = '';
+  showFormMsg('');
+  editingId = null;
+  btnCancelEdit.style.display = 'none';
+}
+function showFormMsg(msg, isError=false){
+  const el = $('#formMsg');
+  el.textContent = msg || '';
+  el.style.color = isError ? 'var(--danger)' : '';
+}
+
+/* export / import / reset */
+btnExport.addEventListener('click', ()=>{
+  const payload = JSON.stringify(state, null, 2);
+  const blob = new Blob([payload], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `peminjaman-tkj-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
+fileImport.addEventListener('change', async (e)=>{
+  const f = e.target.files[0];
+  if(!f) return;
+  try{
+    const text = await f.text();
+    const parsed = JSON.parse(text);
+    if(!parsed.items || !parsed.borrows) throw new Error('Format file tidak valid');
+    if(!confirm('Import akan menggantikan data saat ini. Lanjutkan?')) return;
+    state = parsed;
+    saveData(state);
+    render();
+    alert('Import berhasil');
+  }catch(err){
+    alert('Import gagal: ' + err.message);
+  } finally {
+    fileImport.value = '';
+  }
+});
+
+btnReset.addEventListener('click', ()=>{
+  if(!confirm('Reset akan menghapus semua data lokal dan mengembalikan contoh. Lanjutkan?')) return;
+  state = JSON.parse(JSON.stringify(defaultData));
+  saveData(state);
+  render();
+});
+
+/* init */
+function init(){
+  // ensure shape
+  if(!state.items) state.items = [];
+  if(!state.borrows) state.borrows = [];
+  render();
+}
+init();
+
+/* small util: format for display */
+function pad(n){return n<10? '0'+n : '';}
+</script>
+</body>
+</html>
