@@ -6,7 +6,6 @@
 <title>Aplikasi Peminjaman Barang TKJ</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap');
-
   * {
     box-sizing: border-box;
     margin: 0;
@@ -29,6 +28,8 @@
     padding: 30px;
     box-shadow: 0 8px 25px rgba(0,0,0,0.2);
     text-align: center;
+    overflow-y: auto;
+    max-height: 95vh;
   }
 
   h2 {
@@ -38,7 +39,7 @@
 
   input {
     width: 100%;
-    padding: 12px;
+    padding: 10px;
     border: 1px solid #ccc;
     border-radius: 10px;
     margin-bottom: 15px;
@@ -68,9 +69,7 @@
     transform: scale(1.05);
   }
 
-  .hidden {
-    display: none;
-  }
+  .hidden { display: none; }
 
   table {
     width: 100%;
@@ -81,7 +80,7 @@
   th, td {
     padding: 10px;
     border-bottom: 1px solid #ddd;
-    text-align: center;
+    font-size: 13px;
   }
 
   th {
@@ -90,10 +89,10 @@
   }
 
   td img {
-    width: 50px;
-    height: 50px;
-    border-radius: 8px;
+    width: 60px;
+    height: 60px;
     object-fit: cover;
+    border-radius: 8px;
   }
 
   .logout {
@@ -121,10 +120,9 @@
   <input type="text" id="nama" placeholder="Nama Peminjam">
   <input type="text" id="barang" placeholder="Nama Barang">
   <input type="number" id="jumlah" placeholder="Jumlah">
-  <label for="fotoPinjam">📸 Foto Sebelum Meminjam</label>
-  <input type="file" id="fotoPinjam" accept="image/*">
-  <label for="fotoKembali">📸 Foto Saat Mengembalikan</label>
-  <input type="file" id="fotoKembali" accept="image/*">
+  <label for="fotoSebelum" style="font-size:13px;">Foto Sebelum Peminjaman:</label>
+  <input type="file" id="fotoSebelum" accept="image/*">
+
   <button onclick="tambahData()">Tambah Peminjaman</button>
 
   <table id="tabel">
@@ -133,8 +131,10 @@
         <th>Nama</th>
         <th>Barang</th>
         <th>Jumlah</th>
-        <th>Foto Pinjam</th>
-        <th>Foto Kembali</th>
+        <th>Foto Sebelum</th>
+        <th>Foto Pengembalian</th>
+        <th>Status</th>
+        <th>Aksi</th>
       </tr>
     </thead>
     <tbody></tbody>
@@ -161,39 +161,53 @@
     const nama = document.getElementById('nama').value;
     const barang = document.getElementById('barang').value;
     const jumlah = document.getElementById('jumlah').value;
-    const fotoPinjam = document.getElementById('fotoPinjam').files[0];
-    const fotoKembali = document.getElementById('fotoKembali').files[0];
+    const fotoInput = document.getElementById('fotoSebelum');
     const tbody = document.querySelector('#tabel tbody');
 
-    if (nama && barang && jumlah && fotoPinjam && fotoKembali) {
-      const reader1 = new FileReader();
-      const reader2 = new FileReader();
+    if (nama && barang && jumlah && fotoInput.files.length > 0) {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${nama}</td>
+          <td>${barang}</td>
+          <td>${jumlah}</td>
+          <td><img src="${e.target.result}" alt="foto sebelum"></td>
+          <td id="fotoKembali-${Date.now()}">-</td>
+          <td id="status-${Date.now()}">Dipinjam</td>
+          <td><button onclick="kembalikanBarang(this)">Kembalikan</button></td>
+        `;
+        tbody.appendChild(row);
 
-      reader1.onload = function(e1) {
-        reader2.onload = function(e2) {
-          const row = document.createElement('tr');
-          row.innerHTML = `
-            <td>${nama}</td>
-            <td>${barang}</td>
-            <td>${jumlah}</td>
-            <td><img src="${e1.target.result}" alt="foto pinjam"></td>
-            <td><img src="${e2.target.result}" alt="foto kembali"></td>
-          `;
-          tbody.appendChild(row);
-        }
-        reader2.readAsDataURL(fotoKembali);
-      };
-      reader1.readAsDataURL(fotoPinjam);
-
-      // reset input
-      document.getElementById('nama').value = '';
-      document.getElementById('barang').value = '';
-      document.getElementById('jumlah').value = '';
-      document.getElementById('fotoPinjam').value = '';
-      document.getElementById('fotoKembali').value = '';
+        document.getElementById('nama').value = '';
+        document.getElementById('barang').value = '';
+        document.getElementById('jumlah').value = '';
+        document.getElementById('fotoSebelum').value = '';
+      }
+      reader.readAsDataURL(fotoInput.files[0]);
     } else {
-      alert("Lengkapi semua kolom dan foto sebelum menambah data!");
+      alert("Lengkapi semua kolom dan upload foto sebelum peminjaman!");
     }
+  }
+
+  function kembalikanBarang(btn) {
+    const tdFotoKembali = btn.parentElement.parentElement.querySelector("td:nth-child(5)");
+    const tdStatus = btn.parentElement.parentElement.querySelector("td:nth-child(6)");
+
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = (e) => {
+      const file = e.target.files[0];
+      const reader = new FileReader();
+      reader.onload = function(ev) {
+        tdFotoKembali.innerHTML = `<img src="${ev.target.result}" alt="foto kembali">`;
+        tdStatus.textContent = "Dikembalikan ✅";
+        btn.remove();
+      };
+      reader.readAsDataURL(file);
+    };
+    input.click();
   }
 
   function logout() {
