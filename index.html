@@ -24,7 +24,7 @@
 
   .container {
     background: white;
-    width: 400px;
+    width: 420px;
     border-radius: 20px;
     padding: 30px;
     box-shadow: 0 8px 25px rgba(0,0,0,0.2);
@@ -81,6 +81,7 @@
   th, td {
     padding: 10px;
     border-bottom: 1px solid #ddd;
+    text-align: center;
   }
 
   th {
@@ -88,8 +89,11 @@
     color: white;
   }
 
-  td {
-    text-align: center;
+  td img {
+    width: 50px;
+    height: 50px;
+    border-radius: 8px;
+    object-fit: cover;
   }
 
   .logout {
@@ -117,6 +121,10 @@
   <input type="text" id="nama" placeholder="Nama Peminjam">
   <input type="text" id="barang" placeholder="Nama Barang">
   <input type="number" id="jumlah" placeholder="Jumlah">
+  <label for="fotoPinjam">📸 Foto Sebelum Meminjam</label>
+  <input type="file" id="fotoPinjam" accept="image/*">
+  <label for="fotoKembali">📸 Foto Saat Mengembalikan</label>
+  <input type="file" id="fotoKembali" accept="image/*">
   <button onclick="tambahData()">Tambah Peminjaman</button>
 
   <table id="tabel">
@@ -125,6 +133,8 @@
         <th>Nama</th>
         <th>Barang</th>
         <th>Jumlah</th>
+        <th>Foto Pinjam</th>
+        <th>Foto Kembali</th>
       </tr>
     </thead>
     <tbody></tbody>
@@ -151,18 +161,38 @@
     const nama = document.getElementById('nama').value;
     const barang = document.getElementById('barang').value;
     const jumlah = document.getElementById('jumlah').value;
+    const fotoPinjam = document.getElementById('fotoPinjam').files[0];
+    const fotoKembali = document.getElementById('fotoKembali').files[0];
     const tbody = document.querySelector('#tabel tbody');
 
-    if (nama && barang && jumlah) {
-      const row = document.createElement('tr');
-      row.innerHTML = `<td>${nama}</td><td>${barang}</td><td>${jumlah}</td>`;
-      tbody.appendChild(row);
+    if (nama && barang && jumlah && fotoPinjam && fotoKembali) {
+      const reader1 = new FileReader();
+      const reader2 = new FileReader();
 
+      reader1.onload = function(e1) {
+        reader2.onload = function(e2) {
+          const row = document.createElement('tr');
+          row.innerHTML = `
+            <td>${nama}</td>
+            <td>${barang}</td>
+            <td>${jumlah}</td>
+            <td><img src="${e1.target.result}" alt="foto pinjam"></td>
+            <td><img src="${e2.target.result}" alt="foto kembali"></td>
+          `;
+          tbody.appendChild(row);
+        }
+        reader2.readAsDataURL(fotoKembali);
+      };
+      reader1.readAsDataURL(fotoPinjam);
+
+      // reset input
       document.getElementById('nama').value = '';
       document.getElementById('barang').value = '';
       document.getElementById('jumlah').value = '';
+      document.getElementById('fotoPinjam').value = '';
+      document.getElementById('fotoKembali').value = '';
     } else {
-      alert("Lengkapi semua kolom sebelum menambah data!");
+      alert("Lengkapi semua kolom dan foto sebelum menambah data!");
     }
   }
 
