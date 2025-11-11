@@ -1,111 +1,124 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-<meta charset="UTF-8" />
+<meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Aplikasi Peminjaman Barang TKJ</title>
+<title>Peminjaman Barang TKJ - Mode Malam</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap');
+  
   * {
-    box-sizing: border-box;
     margin: 0;
     padding: 0;
+    box-sizing: border-box;
     font-family: 'Poppins', sans-serif;
   }
 
   body {
-    background: linear-gradient(135deg, #4facfe, #00f2fe);
+    background: black;
     height: 100vh;
+    overflow: hidden;
     display: flex;
     justify-content: center;
     align-items: center;
+    color: white;
+  }
+
+  canvas {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 0;
   }
 
   .container {
-    background: white;
-    width: 420px;
-    border-radius: 20px;
+    position: relative;
+    z-index: 1;
+    width: 400px;
+    background: rgba(20, 20, 20, 0.85);
     padding: 30px;
-    box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+    border-radius: 20px;
+    box-shadow: 0 0 30px rgba(0, 255, 255, 0.2);
     text-align: center;
-    overflow-y: auto;
-    max-height: 95vh;
   }
 
   h2 {
-    color: #333;
     margin-bottom: 20px;
+    color: #00f2fe;
+    text-shadow: 0 0 10px #00f2fe;
   }
 
   input {
     width: 100%;
-    padding: 10px;
-    border: 1px solid #ccc;
+    padding: 12px;
+    border: 1px solid #00f2fe;
     border-radius: 10px;
     margin-bottom: 15px;
-    transition: 0.3s;
+    background: rgba(0,0,0,0.5);
+    color: white;
+  }
+
+  input::placeholder {
+    color: #aaa;
   }
 
   input:focus {
-    border-color: #4facfe;
     outline: none;
-    box-shadow: 0 0 5px #4facfe;
+    border-color: #4facfe;
+    box-shadow: 0 0 10px #00f2fe;
   }
 
   button {
     width: 100%;
     padding: 12px;
-    background: linear-gradient(90deg, #4facfe, #00f2fe);
     border: none;
     border-radius: 10px;
+    background: linear-gradient(90deg, #00c6ff, #0072ff);
     color: white;
+    font-weight: 600;
     font-size: 16px;
     cursor: pointer;
-    font-weight: 600;
     transition: 0.3s;
   }
 
   button:hover {
     transform: scale(1.05);
+    box-shadow: 0 0 15px #00f2fe;
   }
-
-  .hidden { display: none; }
 
   table {
     width: 100%;
-    border-collapse: collapse;
     margin-top: 15px;
+    border-collapse: collapse;
   }
 
   th, td {
     padding: 10px;
-    border-bottom: 1px solid #ddd;
-    font-size: 13px;
+    border-bottom: 1px solid #444;
   }
 
   th {
-    background: #4facfe;
-    color: white;
+    background: rgba(0, 255, 255, 0.2);
+    color: #00f2fe;
   }
 
-  td img {
-    width: 60px;
-    height: 60px;
-    object-fit: cover;
-    border-radius: 8px;
+  .hidden {
+    display: none;
   }
 
   .logout {
     margin-top: 20px;
-    background: #ff5757;
+    background: linear-gradient(90deg, #ff416c, #ff4b2b);
   }
 
   .logout:hover {
-    background: #ff4444;
+    box-shadow: 0 0 15px #ff4b2b;
   }
+
 </style>
 </head>
 <body>
+<canvas id="stars"></canvas>
 
 <div class="container" id="loginPage">
   <h2>Login Peminjaman Barang</h2>
@@ -120,9 +133,6 @@
   <input type="text" id="nama" placeholder="Nama Peminjam">
   <input type="text" id="barang" placeholder="Nama Barang">
   <input type="number" id="jumlah" placeholder="Jumlah">
-  <label for="fotoSebelum" style="font-size:13px;">Foto Sebelum Peminjaman:</label>
-  <input type="file" id="fotoSebelum" accept="image/*">
-
   <button onclick="tambahData()">Tambah Peminjaman</button>
 
   <table id="tabel">
@@ -131,10 +141,6 @@
         <th>Nama</th>
         <th>Barang</th>
         <th>Jumlah</th>
-        <th>Foto Sebelum</th>
-        <th>Foto Pengembalian</th>
-        <th>Status</th>
-        <th>Aksi</th>
       </tr>
     </thead>
     <tbody></tbody>
@@ -144,6 +150,7 @@
 </div>
 
 <script>
+  // Login logic
   function login() {
     const user = document.getElementById('username').value;
     const pass = document.getElementById('password').value;
@@ -157,66 +164,88 @@
     }
   }
 
+  // Tambah data ke tabel
   function tambahData() {
     const nama = document.getElementById('nama').value;
     const barang = document.getElementById('barang').value;
     const jumlah = document.getElementById('jumlah').value;
-    const fotoInput = document.getElementById('fotoSebelum');
     const tbody = document.querySelector('#tabel tbody');
 
-    if (nama && barang && jumlah && fotoInput.files.length > 0) {
-      const reader = new FileReader();
-      reader.onload = function(e) {
-        const row = document.createElement('tr');
-        row.innerHTML = `
-          <td>${nama}</td>
-          <td>${barang}</td>
-          <td>${jumlah}</td>
-          <td><img src="${e.target.result}" alt="foto sebelum"></td>
-          <td id="fotoKembali-${Date.now()}">-</td>
-          <td id="status-${Date.now()}">Dipinjam</td>
-          <td><button onclick="kembalikanBarang(this)">Kembalikan</button></td>
-        `;
-        tbody.appendChild(row);
+    if (nama && barang && jumlah) {
+      const row = document.createElement('tr');
+      row.innerHTML = `<td>${nama}</td><td>${barang}</td><td>${jumlah}</td>`;
+      tbody.appendChild(row);
 
-        document.getElementById('nama').value = '';
-        document.getElementById('barang').value = '';
-        document.getElementById('jumlah').value = '';
-        document.getElementById('fotoSebelum').value = '';
-      }
-      reader.readAsDataURL(fotoInput.files[0]);
+      document.getElementById('nama').value = '';
+      document.getElementById('barang').value = '';
+      document.getElementById('jumlah').value = '';
     } else {
-      alert("Lengkapi semua kolom dan upload foto sebelum peminjaman!");
+      alert("Lengkapi semua kolom sebelum menambah data!");
     }
   }
 
-  function kembalikanBarang(btn) {
-    const tdFotoKembali = btn.parentElement.parentElement.querySelector("td:nth-child(5)");
-    const tdStatus = btn.parentElement.parentElement.querySelector("td:nth-child(6)");
-
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/*';
-    input.onchange = (e) => {
-      const file = e.target.files[0];
-      const reader = new FileReader();
-      reader.onload = function(ev) {
-        tdFotoKembali.innerHTML = `<img src="${ev.target.result}" alt="foto kembali">`;
-        tdStatus.textContent = "Dikembalikan ✅";
-        btn.remove();
-      };
-      reader.readAsDataURL(file);
-    };
-    input.click();
-  }
-
+  // Logout
   function logout() {
     document.getElementById('mainPage').classList.add('hidden');
     document.getElementById('loginPage').classList.remove('hidden');
     document.getElementById('username').value = '';
     document.getElementById('password').value = '';
   }
-</script>
 
+  // Efek bintang jatuh
+  const canvas = document.getElementById("stars");
+  const ctx = canvas.getContext("2d");
+  let stars = [];
+
+  function resize() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+
+  window.addEventListener("resize", resize);
+  resize();
+
+  class Star {
+    constructor() {
+      this.x = Math.random() * canvas.width;
+      this.y = Math.random() * canvas.height;
+      this.size = Math.random() * 2;
+      this.speed = Math.random() * 2 + 0.5;
+    }
+
+    update() {
+      this.y += this.speed;
+      if (this.y > canvas.height) {
+        this.y = 0;
+        this.x = Math.random() * canvas.width;
+      }
+    }
+
+    draw() {
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+      ctx.fillStyle = "white";
+      ctx.fill();
+    }
+  }
+
+  function createStars(num) {
+    for (let i = 0; i < num; i++) {
+      stars.push(new Star());
+    }
+  }
+
+  function animateStars() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    for (let star of stars) {
+      star.update();
+      star.draw();
+    }
+    requestAnimationFrame(animateStars);
+  }
+
+  createStars(100);
+  animateStars();
+</script>
 </body>
 </html>
